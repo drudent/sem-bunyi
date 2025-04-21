@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sem-Bunyi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.1/min/dropzone.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+</head>
+<body class="container-sm h-auto bg-secondary-subtle">
+    <div class="text-center py-5">
+        <h1 class="fw-bolder">Sem-Bunyi</h1><br><br>
+        <p>Selamat datang di Sem-Bunyi, aplikasi untuk menyisipkan dan mengekstrak pesan dari file audio.</p>
+        <p>Silakan pilih salah satu opsi di bawah ini:</p>
+    </div>
+    <h2 class="fw-bold mb-4">Embed Pesan</h2>
+    <div>
+        <label for="input">Pesan: </label>
+        <input class="rounded border border-secondary" type="text" id="input" name="input" required>
+    </div>
+    <br>
+    <!-- Form Dropzone untuk Penyisipan -->
+    <form action="{{ url_for('embed') }}" class="dropzone rounded text-center" id="embedDropzone" method="POST" enctype="multipart/form-data">
+            <div class="dz-message mt-5">Letakkan file di sini atau klik untuk mengunggah.</div>
+    </form>
+
+    <div class="mt-2" id="info-message"></div> <!-- Div untuk menampilkan pesan -->
+
+    <h2 class="fw-bold mt-5 mb-4">Ekstrak Pesan</h2>
+
+    <!-- Form Dropzone untuk Ekstraksi -->
+    <form action="{{ url_for('extract') }}" class="dropzone rounded text-center" id="extractDropzone" method="POST" enctype="multipart/form-data">
+    <div class="dz-message mt-5">Letakkan file di sini atau klik untuk mengunggah.</div>
+  </form>
+
+  <div class="mt-2" id="extracted-message"></div> <!-- Div untuk menampilkan pesan yang diekstrak -->
+
+  <div>
+    <h2 class="fw-bold mt-5 mb-4">Tentang</h2>
+    <p>Sem-Bunyi adalah aplikasi yang memungkinkan Anda untuk menyisipkan dan mengekstrak pesan dari file audio. Ini berguna untuk berbagai keperluan, termasuk komunikasi rahasia dan penyimpanan informasi.</p>
+
+  </div>
+
+  <footer>
+    <div class="text-center py-4">
+        <p>© 2023 Sem-Bunyi. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.1/min/dropzone.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+  <script>
+    // Kosongkan field input saat halaman dimuat
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById('input').value = "";
+    });
+
+    // Konfigurasi Dropzone untuk penyisipan
+    Dropzone.options.embedDropzone = {
+        paramName: "file", // Nama yang akan digunakan untuk mentransfer file
+        maxFilesize: 100, // MB
+        acceptedFiles: ".m4a,.mp3,.wav", // Jenis file yang diterima
+        init: function() {
+            this.on("sending", function(file, xhr, formData) {
+                // Tambahkan pesan ke form data
+                var message = document.getElementById('input').value;
+                formData.append("input", message); // Pastikan kunci sesuai dengan kode Flask
+            });
+            this.on("success", function(file, response) {
+                // Tangani respons dari server
+                if (response['info-message']) {
+                    document.getElementById('info-message').innerHTML = '<p>' + response['info-message'] + '</p>';
+                    // Buat tautan unduhan
+                    var downloadLink = document.createElement('a');
+                    downloadLink.href = response.download_link;
+                    downloadLink.innerText = 'Download Output File';
+                    downloadLink.download = 'output.wav'; // Opsional: sarankan nama file
+                    document.getElementById('info-message').appendChild(downloadLink);
+                } else if (response['error']) {
+                    document.getElementById('info-message').innerHTML = '<p>Error: ' + response['error'] + '</p>';
+                }
+            });
+            this.on("error", function(file, response) {
+                // Tangani kesalahan
+                console.error(response);
+                let errorMessage = "Error mengunggah file: ";
+                if (typeof response === 'string') {
+                    errorMessage += response; // Jika respons berupa string
+                } else if (response.message) {
+                    errorMessage += response.message; // Jika respons memiliki properti pesan
+                } else {
+                    errorMessage += JSON.stringify(response); // Alternatif: stringify objek
+                }
+                alert(errorMessage);
+            });
+        }
+    };
+    
+    // Konfigurasi Dropzone untuk ekstraksi
+    Dropzone.options.extractDropzone = {
+        paramName: "file", // Nama yang akan digunakan untuk mentransfer file
+        maxFilesize: 100, // MB
+        acceptedFiles: ".m4a,.mp3,.wav", // Jenis file yang diterima (tidak perlu diubah di sini)
+        success: function(file, response) {
+            // Tangani respons dari server
+            if (response.message) {
+                document.getElementById('extracted-message').innerHTML = '<p>Pesan yang Diekstrak: ' + response.message + '</p>';
+            } else if (response.error) {
+                document.getElementById('extracted-message').innerHTML = '<p>Error: ' + response.error + '</p>';
+            }
+        },
+        error: function(file, response) {
+            // Tangani kesalahan
+            console.error(response);
+            alert("Error mengunggah file: " + response);
+        }
+    };
+  </script>
+</body>
+</html>
